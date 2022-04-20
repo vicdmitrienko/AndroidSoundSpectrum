@@ -12,6 +12,7 @@ class MicRecorder : Runnable {
     private val tag = this::class.java.simpleName
     private val sampleRate = 44100
     private var isRecording = false
+    private var onSoundBufferUpdate: OnSoundBufferUpdate? = null
 
     @SuppressLint("MissingPermission")
     override fun run() {
@@ -38,6 +39,8 @@ class MicRecorder : Runnable {
         while (isRecording) {
             val numberOfBytes = record.read(audioBuffer, 0, audioBuffer.size)
             Log.i(tag, "Received $numberOfBytes bytes from mic.")
+
+            onSoundBufferUpdate?.soundBufferUpdate(audioBuffer)
         }
 
         record.stop()
@@ -53,6 +56,14 @@ class MicRecorder : Runnable {
 
     fun stopRecord() {
         isRecording = false
+    }
+
+    fun setOnSoundBufferCallback(callback: OnSoundBufferUpdate) {
+        onSoundBufferUpdate = callback
+    }
+
+    interface OnSoundBufferUpdate {
+        fun soundBufferUpdate(buffer: ByteArray)
     }
 
 }

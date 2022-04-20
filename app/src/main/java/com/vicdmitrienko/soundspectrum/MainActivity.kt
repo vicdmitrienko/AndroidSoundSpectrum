@@ -5,17 +5,19 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 
 // MVP
-// 1) Запрашивать разрешение на доступ к микрофону
-// 2) Научиться получать звук с микрофона устройства
-//TODO: Сделать View для отображения спектра на экране
-//TODO: Научиться выделать и определять из спектра ноты
+// 1) Request permissions for microphone
+// 2) Get sound wave from microphone
+// 3) Show sound wave on screen
+//TODO: Create View to show sound spectre on screen
+//TODO: Learn to fetch notes from sound stream
 
-// Ссылки:
+// Links:
 // https://github.com/dotH55/Audio_Analyser
 // https://developer.android.com/guide/topics/media/mediarecorder
 // https://github.com/dasaki/android_fft_minim
@@ -23,11 +25,12 @@ import androidx.core.content.ContextCompat
 // https://stackoverflow.com/questions/5774104/android-audio-fft-to-retrieve-specific-frequency-magnitude-using-audiorecord
 // https://github.com/dczyzowski/FourierTransform2/blob/master/app/src/main/java/com/example/damian/fouriertransform/FFT.java
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), MicRecorder.OnSoundBufferUpdate {
 
     private val tag = MainActivity::class.java.simpleName
     private val recordAudioRequestCode = 123
     private var micRecorder: MicRecorder? = null
+    private var soundView: SoundView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,6 +40,8 @@ class MainActivity : AppCompatActivity() {
             getPermissionToRecordAudio()
         }
 
+        soundView = findViewById(R.id.soundView)
+
     }
 
     override fun onResume() {
@@ -44,6 +49,7 @@ class MainActivity : AppCompatActivity() {
 
         // Start mic listener
         micRecorder = MicRecorder()
+        micRecorder?.setOnSoundBufferCallback(this)
         micRecorder?.startRecord()
     }
 
@@ -92,4 +98,10 @@ class MainActivity : AppCompatActivity() {
             super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         }
     }
+
+    override fun soundBufferUpdate(buffer: ByteArray) {
+        Log.i(tag, "soundBufferUpdate triggered")
+        soundView?.setSoundWave(buffer)
+    }
+
 }
