@@ -18,6 +18,12 @@ class SoundView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ): View(context, attrs, defStyleAttr) {
 
+    // Optimization ways:
+    //TODO: Simplify sound wave. Reduce point count or skip some values in buffer
+
+    // Add functionality
+    //TODO: Add draw mode "Spectrum"
+
     //region Settings
     private val tag = this::class.java.simpleName
     private val paintBack = Paint().apply {
