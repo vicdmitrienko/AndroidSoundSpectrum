@@ -2,7 +2,7 @@
 
 ## To-do
 
-- [ ] Create view for sound wave visualization
+- [x] Create view for sound wave visualization
 - [ ] Create view for sound spectrum visualization
 
 ## Some Ideas About Analysis

@@ -33,6 +33,7 @@ class SoundView @JvmOverloads constructor(
     private val paintWave = Paint().apply {
         color = Color.rgb(0, 0xFF, 0)
         strokeWidth = 0f    // hairline
+        textSize = paintHashTextSize.getSp(context)
         isAntiAlias = true
     }
 
@@ -44,6 +45,10 @@ class SoundView @JvmOverloads constructor(
     //endregion
 
     private var soundWave: ByteArray? = null
+
+    private val drawTimeAvgCount = 100
+    private val drawTimes = Array<Int>(drawTimeAvgCount) { 0 }
+    private var drawTimeIndex = 0
 
     // Test function
     private fun getMockWave(): ByteArray {
@@ -111,6 +116,10 @@ class SoundView @JvmOverloads constructor(
             if (soundWave != null)
                 drawSoundWave(canvas)
         }
+        drawTimes[drawTimeIndex++] = millis.toInt()
+        if (drawTimeIndex >= drawTimeAvgCount) drawTimeIndex = 0
+
+        drawStat(canvas)
 
         Log.i(tag, "Draw time $millis ms")
     }
@@ -191,6 +200,34 @@ class SoundView @JvmOverloads constructor(
             width / 2 - paddingHorizontalTxtLabels - minValueWidth,
             height - paddingVerticalTxtLabels,
             paintHash)
+    }
+
+    private fun drawStat(canvas: Canvas) {
+        val textMetrics = paintHash.fontMetrics
+        val textHeight = -textMetrics.ascent * 1.5f
+
+        // view width
+        canvas.drawText(
+            "View width, dp: $width",
+            paddingHorizontalTxtLabels,
+            paddingVerticalTxtLabels + textHeight,
+            paintWave
+        )
+        // buffer size
+        canvas.drawText(
+            "Buffer size, bytes: ${soundWave?.size ?: 0}",
+            paddingHorizontalTxtLabels,
+            paddingVerticalTxtLabels + textHeight * 2,
+            paintWave
+        )
+        // draw time
+        val drawTimeAvg = drawTimes.average()
+        canvas.drawText(
+            "Avg draw time, ms: $drawTimeAvg",
+            paddingHorizontalTxtLabels,
+            paddingVerticalTxtLabels + textHeight * 3,
+            paintWave
+        )
     }
 
 }
