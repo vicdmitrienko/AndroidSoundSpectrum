@@ -8,6 +8,8 @@ import android.media.AudioFormat
 import android.util.AttributeSet
 import android.util.Log
 import android.view.View
+import com.vicdmitrienko.soundspectrum.fft2.Signal
+import com.vicdmitrienko.soundspectrum.fft2.Spectrum
 import com.vicdmitrienko.soundspectrum.utils.getSp
 import kotlin.math.sin
 import kotlin.system.measureTimeMillis
@@ -51,6 +53,11 @@ class SoundView @JvmOverloads constructor(
     //endregion
 
     private var soundWave: ByteArray? = null
+    private var soundSpectrum: Spectrum? = null
+
+    private var viewMode = ViewMode.SPECTRUM
+
+    private var isDraw = false
 
     private val drawTimeAvgCount = 100
     private val drawTimes = Array<Int>(drawTimeAvgCount) { 0 }
@@ -76,13 +83,14 @@ class SoundView @JvmOverloads constructor(
 
     fun setSoundWave(newWave: ByteArray) {
         // Check for overload
-        if (isDirty) {
+        if (isDraw) {
             Log.d(tag, "SoundView is dirty! Skip invalidation.")
             return
         }
 
         Log.d(tag, "SoundView invalidation...")
         soundWave = newWave
+        soundSpectrum = null
         invalidate()
     }
 
@@ -112,15 +120,34 @@ class SoundView @JvmOverloads constructor(
             else -> 0
         }
     }
+    private fun sampleCount(): Int {
+        return if (soundWave != null)
+            soundWave!!.size / 2
+        else
+            0
+    }
+    private fun sample(i: Int): Int {
+        val value = (soundWave!![i * 2 + 1].toInt() and 0xFF shl 8) or
+                (soundWave!![i * 2].toInt() and 0xFF)
+        return value.toShort().toInt()
+    }
     //endregion
 
     override fun onDraw(canvas: Canvas) {
+        isDraw = true
         super.onDraw(canvas)
 
         val millis = measureTimeMillis {
-            drawMesh(canvas)
-            if (soundWave != null)
-                drawSoundWave(canvas)
+            when (viewMode) {
+                ViewMode.WAVE -> {
+                    drawWaveMesh(canvas)
+                    drawSoundWave(canvas)
+                }
+                ViewMode.SPECTRUM -> {
+                    drawSpectrumMesh(canvas)
+                    drawSoundSpectrum(canvas)
+                }
+            }
         }
         drawTimes[drawTimeIndex++] = millis.toInt()
         if (drawTimeIndex >= drawTimeAvgCount) drawTimeIndex = 0
@@ -128,23 +155,83 @@ class SoundView @JvmOverloads constructor(
         drawStat(canvas)
 
         Log.i(tag, "Draw time $millis ms")
+        isDraw = false
+    }
+
+    private fun drawSoundSpectrum(canvas: Canvas) {
+        if (soundWave == null) return
+
+        if (soundSpectrum == null) {
+            val sampleCount = sampleCount()
+            var signalLength = 2
+            while (signalLength < sampleCount) signalLength *= 2
+
+            val samplesBuf = Array<Double>(signalLength) { i ->
+                if (i<sampleCount)
+                    sample(i).toDouble()
+                else
+                    0.0
+            }
+            val signal = Signal(samplesBuf)
+            // create spectrum
+            soundSpectrum = Spectrum(signal)
+
+            val strongPeak = soundSpectrum!!.detectStrongPeak(0.0)
+            Log.i(tag, "Strong peak = $strongPeak")
+        }
+
+        val maxHeight = height.toFloat() - 1f
+        val maxWidth  = width.toFloat() - 1f
+        val sampleCount = soundSpectrum!!.getLength() / 2
+        val halfHeight = maxHeight / 2
+        val sampleMax = 1000
+
+        fun sampleNumToX(sampleNum: Int): Float =
+            maxWidth * sampleNum / sampleCount
+        fun sampleVolToY(sampleVol: Float): Float =
+            halfHeight - halfHeight * sampleVol / sampleMax
+        fun spectrumValue(index: Int): Float =
+            soundSpectrum!!.getAbs(index).toFloat()
+
+        for (i in 1 until sampleCount) {
+            canvas.drawLine(
+                sampleNumToX(i-1),
+                sampleVolToY(spectrumValue(i-1)),
+                sampleNumToX(i),
+                sampleVolToY(spectrumValue(i)),
+                paintWave
+            )
+        }
+    }
+
+    private fun drawSpectrumMesh(canvas: Canvas) {
+        val maxHeight = height.toFloat() - 1f
+        val maxWidth = width.toFloat() - 1f
+
+        // Fill background
+        canvas.drawPaint(paintBack)
+        // Mesh
+        for (i in 0..10) {
+            val y = i * maxHeight / 10
+            val x = i * maxWidth / 10
+
+            canvas.drawLine(0f, y, width.toFloat(), y, paintHash)
+            canvas.drawLine(x, 0f, x, height.toFloat(), paintHash)
+        }
     }
 
     private fun drawSoundWave(canvas: Canvas) {
+        if (soundWave == null) return
+
         val maxHeight = height.toFloat() - 1f
         val maxWidth  = width.toFloat() - 1f
-        val sampleCount = soundWave!!.size / 2
+        val sampleCount = sampleCount()
         val halfHeight = maxHeight / 2
 
         fun sampleNumToX(sampleNum: Int): Float =
             maxWidth * sampleNum / sampleCount
         fun sampleVolToY(sampleVol: Int): Float =
             halfHeight - halfHeight * sampleVol / Short.MAX_VALUE
-        fun sample(i: Int): Int {
-            val value = (soundWave!![i * 2 + 1].toInt() and 0xFF shl 8) or
-                    (soundWave!![i * 2].toInt() and 0xFF)
-            return value.toShort().toInt()
-        }
 
         for (i in 1 until sampleCount) {
             canvas.drawLine(
@@ -157,7 +244,7 @@ class SoundView @JvmOverloads constructor(
         }
     }
 
-    private fun drawMesh(canvas: Canvas) {
+    private fun drawWaveMesh(canvas: Canvas) {
         val maxHeight = height.toFloat() - 1f
         val maxWidth  = width.toFloat() - 1f
 
@@ -212,18 +299,25 @@ class SoundView @JvmOverloads constructor(
         val textMetrics = paintHash.fontMetrics
         val textHeight = -textMetrics.ascent * 1.5f
 
+        // view mode
+        canvas.drawText(
+            "View mode: ${viewMode.desc}",
+            paddingHorizontalTxtLabels,
+            paddingVerticalTxtLabels + textHeight,
+            paintWave
+        )
         // view width
         canvas.drawText(
             "View width, dp: $width",
             paddingHorizontalTxtLabels,
-            paddingVerticalTxtLabels + textHeight,
+            paddingVerticalTxtLabels + textHeight * 2,
             paintWave
         )
         // buffer size
         canvas.drawText(
             "Buffer size, bytes: ${soundWave?.size ?: 0}",
             paddingHorizontalTxtLabels,
-            paddingVerticalTxtLabels + textHeight * 2,
+            paddingVerticalTxtLabels + textHeight * 3,
             paintWave
         )
         // draw time
@@ -231,9 +325,14 @@ class SoundView @JvmOverloads constructor(
         canvas.drawText(
             "Avg draw time, ms: $drawTimeAvg",
             paddingHorizontalTxtLabels,
-            paddingVerticalTxtLabels + textHeight * 3,
+            paddingVerticalTxtLabels + textHeight * 4,
             paintWave
         )
+    }
+
+    enum class ViewMode(val id: Int, val desc: String) {
+        WAVE(0, "Sound wave"),
+        SPECTRUM(1, "Sound spectrum")
     }
 
 }
