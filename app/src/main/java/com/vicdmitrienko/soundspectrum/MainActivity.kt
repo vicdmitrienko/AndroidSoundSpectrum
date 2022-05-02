@@ -9,6 +9,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
+import com.vicdmitrienko.soundspectrum.generator.WaveGenerator
 
 // MVP
 // 1) Request permissions for microphone
@@ -46,6 +47,9 @@ class MainActivity : AppCompatActivity(), MicRecorder.OnSoundBufferUpdate {
 
     override fun onResume() {
         super.onResume()
+
+        // Test waveFrequencyHz = 44100.0 / 2048.0
+        //soundBufferUpdate( WaveGenerator(waveAmplitude = 0.5f).buffer )
 
         // Start mic listener
         micRecorder = MicRecorder()
