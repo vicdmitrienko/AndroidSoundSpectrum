@@ -8,9 +8,11 @@ import android.media.AudioFormat
 import android.util.AttributeSet
 import android.util.Log
 import android.view.View
+import androidx.core.graphics.withSave
 import com.vicdmitrienko.soundspectrum.fft2.Signal
 import com.vicdmitrienko.soundspectrum.fft2.Spectrum
 import com.vicdmitrienko.soundspectrum.utils.getSp
+import kotlin.math.min
 import kotlin.math.sin
 import kotlin.system.measureTimeMillis
 
@@ -21,10 +23,10 @@ class SoundView @JvmOverloads constructor(
 ): View(context, attrs, defStyleAttr) {
 
     // Optimization ways:
-    //TODO: Simplify sound wave. Reduce point count or skip some values in buffer
+    //TODO: Simplify sound wave for fast drawing. Reduce point count or skip some values in buffer
 
     // Add functionality
-    //TODO: Add draw mode "Spectrum"
+    //TODO: Add draw mode switcher between "Wave" and "Spectrum" modes
 
     //region Settings
     private val tag = this::class.java.simpleName
@@ -162,6 +164,10 @@ class SoundView @JvmOverloads constructor(
         if (soundWave == null) return
 
         if (soundSpectrum == null) {
+            /*
+             * FFT waits sampling buffer with size of power of 2.
+             * We need to append buffer with zeroes.
+             */
             val sampleCount = sampleCount()
             var signalLength = 2
             while (signalLength < sampleCount) signalLength *= 2
@@ -181,19 +187,65 @@ class SoundView @JvmOverloads constructor(
         }
 
         val maxHeight = height.toFloat() - 1f
-        val maxWidth  = width.toFloat() - 1f
-        val sampleCount = soundSpectrum!!.getLength() / 2
         val halfHeight = maxHeight / 2
+        val maxWidth  = width.toFloat() - 1f
         val sampleMax = 1000
 
+        /* We do not need all calculated spectrum values.
+         * Maximum is - signals count of highest note in sampled frame.
+         * For example, C8 = 4186.009 Hz
+         * in sampling frame 46.4ms (44100Hz sampling, 2048 samples),
+         * peak should be around 194 repeats in frame.
+         */
+        val spectrumSize = soundSpectrum!!.getLength() / 2
+        val sampleCount = sampleCount()
+        val maxWaveFreqHz = 3000
+        val maxWaveCountInFrame: Int = maxWaveFreqHz * sampleCount / sampleRate
+
+        val maxWaveCount = min(spectrumSize, maxWaveCountInFrame)
+
         fun sampleNumToX(sampleNum: Int): Float =
-            maxWidth * sampleNum / sampleCount
+            maxWidth * sampleNum / maxWaveCount
         fun sampleVolToY(sampleVol: Float): Float =
             halfHeight - halfHeight * sampleVol / sampleMax
         fun spectrumValue(index: Int): Float =
             soundSpectrum!!.getAbs(index).toFloat()
 
-        for (i in 1 until sampleCount) {
+        // Draw frequency values on mesh
+        canvas.withSave {
+            canvas.rotate(-90f)
+
+            val fontMetrics = paintHash.fontMetrics
+            val textHeight = -fontMetrics.ascent
+
+            // Draw first label Hz
+            val hzStr = "Hz"
+            val hzTxtWidth = paintHash.measureText(hzStr)
+            canvas.drawText(
+                hzStr,
+                -maxHeight / 2 - hzTxtWidth - paddingHorizontalTxtLabels,
+                x + textHeight + paddingVerticalTxtLabels,
+                paintHash
+            )
+
+            for (i in 1..10) {
+                val x = i * maxWidth / 10
+                val freq: Int = i * maxWaveCount/10 * sampleRate / sampleCount
+
+                val freqStr = freq.toString()
+                val freqTxtWidth = paintHash.measureText(freqStr)
+
+                canvas.drawText(
+                    freqStr,
+                    -maxHeight / 2 - freqTxtWidth - paddingHorizontalTxtLabels,
+                    x - paddingVerticalTxtLabels,
+                    paintHash
+                )
+            }
+        }
+
+        // Draw spectrum curve
+        for (i in 1 until maxWaveCount) {
             canvas.drawLine(
                 sampleNumToX(i-1),
                 sampleVolToY(spectrumValue(i-1)),
