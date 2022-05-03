@@ -1,4 +1,4 @@
-package com.vicdmitrienko.soundspectrum.fft2;
+package com.vicdmitrienko.soundspectrum.fft.help;
 
 public class FourierTransformJava {
 
@@ -41,7 +41,7 @@ public class FourierTransformJava {
 
         // copy elements
         if (direction == Direction.Forward) {
-            // devide also for forward transform
+            // divide also for forward transform
             for (int i = 0; i < data.length; i++) {
                 data[i] = Complex.div(data[i], Double.valueOf(n));// data[i] /= n;
             }
@@ -158,7 +158,7 @@ public class FourierTransformJava {
         }
     }
 
-    // Two dimensional Fast Fourier Transform.
+    // Two-dimensional Fast Fourier Transform.
     public static void FFT2(Complex[][] data, Direction direction) {
         int k = data.length;	// rows
         int n = data[0].length;	// columns

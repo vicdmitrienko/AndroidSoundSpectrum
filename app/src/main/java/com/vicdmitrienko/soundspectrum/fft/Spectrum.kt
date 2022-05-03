@@ -2,22 +2,29 @@ package com.vicdmitrienko.soundspectrum.fft
 
 import kotlin.math.*
 
+@Suppress("unused", "RedundantExplicitType", "RemoveExplicitTypeArguments",
+    "MemberVisibilityCanBePrivate"
+)
 class Spectrum(length: Int) {
 
     private var signal: Signal? = null
-    private var spectrum: Array<Complex> = Array(length) { Complex() }
+    private var spectrum: Array<Complex> = Array(length) { Complex.ZERO }
 
     constructor(signal: Signal): this(signal.getLength()) {
-        recalcForNewSignal(signal)
+        recalculateForNewSignal(signal)
     }
 
-    fun recalc() {
-        if (signal != null) spectrum = fft(signal!!.toArray())
+    fun recalculate() {
+        if (signal != null) {
+            for (i in spectrum.indices)
+                spectrum[i] = Complex( signal!!.get(i), 0.0 )
+            FourierTransform.FFT(spectrum)
+        }
     }
 
-    fun recalcForNewSignal(signal: Signal) {
+    fun recalculateForNewSignal(signal: Signal) {
         this.signal = signal
-        recalc()
+        recalculate()
     }
 
     fun getLength() = spectrum.size
@@ -26,7 +33,7 @@ class Spectrum(length: Int) {
 
     fun getAbs(index: Int): Double = spectrum[index].abs()
 
-    fun getPhase(index: Int): Double = spectrum[index].arg()
+    fun getPhase(index: Int): Double = spectrum[index].phase()
 
     fun getRealAmplitude(index: Int): Double {
         val amplitude = spectrum[index].abs()
@@ -36,6 +43,8 @@ class Spectrum(length: Int) {
         else
             (amplitude * 2) / spectrum.size
     }
+
+    //TODO: Write peak detection more precisely using neighbour values
 
     fun detectStrongPeak(min: Double): Int {
         var peak = -1
@@ -118,42 +127,6 @@ class Spectrum(length: Int) {
         }
 
         return peak * getRealAmplitude( detectStrongPeak(0.0) ) / distributionConfidence
-    }
-
-    companion object {
-
-        @Suppress("UnnecessaryVariable", "LocalVariableName")
-        fun fft(x: Array<Complex>): Array<Complex> {
-            val N = x.size
-
-            // base case
-            if (N == 1) return Array(1) { x[0] }
-
-            // radix 2 Cooley-Tukey FFT
-            if (N % 2 != 0) throw RuntimeException("N is not a power of 2")
-
-            // fft of even terms
-            val even = Array<Complex>(N / 2) { k -> x[2*k] }
-            val q = fft(even)
-
-            // fft of odd terms
-            val odd = even // reuse the array
-            for (k in odd.indices) { odd[k] = x[2*k + 1] }
-            val r = fft(odd)
-
-            // combine
-            val y = Array<Complex>(N) { Complex() }
-            for (k in 0 until N/2) {
-                val kth: Double = -2 * k * PI / N
-                val wk          = Complex( cos(kth), sin(kth) )
-                val times       = Complex.times(wk, r[k])
-                y[k      ].set( Complex.plus( q[k], times) )
-                y[k + N/2].set( Complex.minus(q[k], times) )
-            }
-
-            return y
-        }
-
     }
 
 }

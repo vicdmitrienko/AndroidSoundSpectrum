@@ -1,4 +1,4 @@
-package com.vicdmitrienko.soundspectrum.fft2
+package com.vicdmitrienko.soundspectrum.fft
 
 import kotlin.math.PI
 import kotlin.math.cos
@@ -6,13 +6,17 @@ import kotlin.math.sin
 
 class FourierTransform {
 
+    @Suppress("unused")
     enum class Direction(val sign: Int) {
         FORWARD(1),
         BACKWARD(-1)
     }
 
     companion object {
+
+
         // One dimensional Fast Fourier Transform.
+        @Suppress("RedundantExplicitType", "FunctionName")
         fun FFT(data: Array<Complex>, direction: Direction = Direction.FORWARD) {
             val n = data.size
             val m = log2(n)
@@ -55,6 +59,7 @@ class FourierTransform {
         }
 
         // Get rotation of complex number
+        @Suppress("RemoveExplicitTypeArguments")
         private fun getComplexRotation(numberOfBits: Int, direction: Direction): Array<Complex> {
             val directionIndex = if (direction == Direction.FORWARD) 0 else 1
 
@@ -101,6 +106,7 @@ class FourierTransform {
         }
 
         // Get array, indicating which data members should be swapped before FFT
+        @Suppress("RemoveExplicitTypeArguments")
         fun getReversedBits(numberOfBits: Int): Array<Int> {
             if (numberOfBits < MIN_BITS || numberOfBits > MAX_BITS)
                 throw IllegalArgumentException("getReversedBits: Illegal bits")
@@ -232,10 +238,10 @@ class FourierTransform {
             if (x > 0) (x and (x - 1)) == 0
             else false
 
-        private val MIN_LENGTH = 2
-        private val MAX_LENGTH = 256 * 16 * 8
-        private val MIN_BITS = 1
-        private val MAX_BITS = 15
+        private const val MIN_LENGTH = 2
+        private const val MAX_LENGTH = 256 * 16 * 8
+        private const val MIN_BITS = 1
+        private const val MAX_BITS = 15
 
         private val RESERVED_BITS = Array<Array<Int>?>(MAX_BITS) { null }
         private val COMPLEX_ROTATION = Array<Array<Array<Complex>?>>(MAX_BITS) {

@@ -2,49 +2,40 @@ package com.vicdmitrienko.soundspectrum.fft
 
 import kotlin.math.sqrt
 
+@Suppress("unused", "MemberVisibilityCanBePrivate")
 class Signal(
-    private val signalValues: Array<Complex>
+    private val signalValues: Array<Double>
 ) {
 
     constructor(length: Int): this(
-        Array<Complex>(length) { Complex() }
+        Array<Double>(length) { 0.0 }
     )
 
     constructor(copyFrom: Signal): this(copyFrom.signalValues.size) {
         for (i in signalValues.indices) {
-            signalValues[i] = Complex(copyFrom.signalValues[i])
-        }
-    }
-
-    constructor(signalValuesFrom: Array<Double>): this(signalValuesFrom.size) {
-        for (i in signalValuesFrom.indices) {
-            signalValues[i].set(re = signalValuesFrom[i], im = 0.0)
+            signalValues[i] = copyFrom.signalValues[i]
         }
     }
 
     constructor(signalValuesFrom: Collection<Double>): this(signalValuesFrom.size) {
         for ((i, signalValue) in signalValuesFrom.withIndex()) {
-            signalValues[i].set(re = signalValue, im = 0.0)
+            signalValues[i] = signalValue
         }
     }
 
-    fun getReal(i: Int): Double = signalValues[i].getRe()
+    fun get(i: Int): Double = signalValues[i]
 
-    fun getImaginary(i: Int): Double = signalValues[i].getIm()
-
-    fun get(i: Int): Complex = signalValues[i]
-
-    fun setValue(index: Int, value: Complex) {
-        signalValues[index].set(value)
+    fun setValue(index: Int, value: Double) {
+        signalValues[index] = value
     }
 
     fun getLength(): Int = signalValues.size
 
     fun realMean(): Double {
-        var mean: Double = 0.0
+        var mean = 0.0
 
         for (x in signalValues) {
-            mean += x.getRe()
+            mean += x
         }
         mean /= signalValues.size
 
@@ -53,10 +44,10 @@ class Signal(
 
     fun standardDeviation(): Double {
         val mean: Double = realMean()
-        var deviation: Double = 0.0
+        var deviation = 0.0
 
         for (x in signalValues) {
-            deviation += (x.getRe() - mean) * (x.getRe() - mean)
+            deviation += (x - mean) * (x - mean)
         }
         deviation /= signalValues.size
 
@@ -71,7 +62,7 @@ class Signal(
         checkSameSize(b)
 
         for ((i, value) in b.signalValues.withIndex()) {
-            signalValues[i].set(value)
+            signalValues[i] = value
         }
 
         return this
@@ -81,7 +72,7 @@ class Signal(
         checkSameSize(b)
 
         for ((i, value) in b.signalValues.withIndex()) {
-            signalValues[i].minus(value)
+            signalValues[i] = signalValues[i].minus(value)
         }
 
         return this
@@ -91,12 +82,12 @@ class Signal(
         checkSameSize(b)
 
         for ((i, value) in b.signalValues.withIndex()) {
-            signalValues[i].times(value)
+            signalValues[i] = signalValues[i] * value
         }
 
         return this
     }
 
-    fun toArray(): Array<Complex> = signalValues
+    fun toArray(): Array<Double> = signalValues
 
 }

@@ -9,14 +9,14 @@ import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
-import com.vicdmitrienko.soundspectrum.generator.WaveGenerator
 
 // MVP
 // 1) Request permissions for microphone
 // 2) Get sound wave from microphone
 // 3) Show sound wave on screen
-//TODO: Create View to show sound spectre on screen
+// 4) Create View to show sound spectre on screen
 //TODO: Learn to fetch notes from sound stream
+//TODO: Write test functions with sound wave generation and notes detection
 
 // Links:
 // https://github.com/dotH55/Audio_Analyser

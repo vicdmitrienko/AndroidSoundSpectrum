@@ -1,98 +1,101 @@
 package com.vicdmitrienko.soundspectrum.fft
 
+import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.hypot
+import kotlin.math.sqrt
 
+@Suppress("unused")
 class Complex(
-    // the real or imaginary part
-    private var re: Double = 0.0,
-    private var im: Double = 0.0
+    val real: Double,
+    val imaginary: Double
 ) {
 
-    constructor(copyFrom: Complex) : this(
-        re = copyFrom.re,
-        im = copyFrom.im
-    )
+    constructor(copyFrom: Complex): this(copyFrom.real, copyFrom.imaginary)
 
-    override fun toString(): String {
+    fun magnitude(): Double = this.abs()
+
+    //TODO: Check which implementation is faster
+    fun abs2(): Double = hypot(real, imaginary)
+
+    fun abs(): Double {
+        if (real.isInfinite() || imaginary.isInfinite()) return Double.POSITIVE_INFINITY
+
+        // |value| == sqrt(a^2 + b^2)
+        // sqrt(a^2 + b^2) == a/a * sqrt(a^2 + b^2) = a * sqrt(a^2/a^2 + b^2/a^2)
+        // Using the above we can factor out the square of the larger component to dodge overflow.
+        val c = abs(real)
+        val d = abs(imaginary)
         return when {
-            im == 0.0 -> "$re"
-            re == 0.0 -> "${im}i"
-            im < 0    -> "$re - ${-im}i"
-            else      -> "$re + ${im}i"
+            c > d -> {
+                val r = d / c
+                c * sqrt(1.0 + r * r)
+            }
+            d == 0.0 -> {
+                c // c is either 0.0 or NaN
+            }
+            else -> {
+                val r = c / d
+                d * sqrt(1.0 + r * r)
+            }
         }
     }
 
-    fun abs(): Double = hypot(re, im)
+    fun phase(): Double = atan2(imaginary, real)
 
-    fun arg(): Double = atan2(im, re)
-
-    fun plus(b: Complex): Complex {
-        re += b.re
-        im += b.im
-        return this
-    }
-
-    fun minus(b: Complex): Complex {
-        re -= b.re
-        im -= b.im
-        return this
-    }
-
-    fun times(b: Complex): Complex {
-        val real = re * b.re - im * b.im
-        val imag = re * b.im + im * b.re
-
-        re = real
-        im = imag
-
-        return this
-    }
-
-    fun times(alpha: Double): Complex {
-        re *= alpha
-        im *= alpha
-        return this
-    }
-
-    fun divides(b: Complex): Complex = times(reciprocal(b))
-
-    fun conjugate(): Complex {
-        im = -im
-        return this
-    }
+    fun conjugate(): Complex = Complex(real, -imaginary)
 
     fun reciprocal(): Complex {
-        val scale = re * re + im * im
-        re /= scale
-        im /= (-scale)
-        return this
+        return if (real == 0.0 && imaginary == 0.0)
+            ZERO
+        else
+            ONE.div(this)
     }
 
-    fun getRe(): Double = re
+    fun add(b: Complex): Complex = Complex(real + b.real, imaginary + b.imaginary)
 
-    fun getIm(): Double = im
+    fun minus(b: Complex): Complex = Complex(real - b.real, imaginary - b.imaginary)
 
-    fun set(re: Double, im: Double): Complex {
-        this.re = re
-        this.im = im
-        return this
+    fun multiply(right: Complex): Complex = Complex(
+        this.real * right.real - this.imaginary * right.imaginary,
+        this.real * right.imaginary + this.imaginary * right.real
+    )
+
+    fun div(right: Complex): Complex {
+        val a = real
+        val b = imaginary
+        val c = right.real
+        val d = right.imaginary
+
+        return if (abs(d) < abs(c)) {
+            val doc = d / c
+            Complex(
+                (a + b * doc) / (c + d * doc),
+                (b - a * doc) / (c + d * doc)
+            )
+        } else {
+            val cod = c / d
+            Complex(
+                (b + a * cod) / (d + c * cod),
+                (-a + b * cod) / (d + c * cod)
+            )
+        }
     }
 
-    fun set(b: Complex): Complex {
-        this.re = b.re
-        this.im = b.im
-        return this
+    fun div(right: Double): Complex = div( Complex(right, 0.0) )
+
+    override fun toString(): String {
+        return when {
+            imaginary == 0.0 -> "$real"
+            real == 0.0      -> "${imaginary}i"
+            imaginary < 0    -> "$real - ${-imaginary}i"
+            else             -> "$real + ${imaginary}i"
+        }
     }
 
     companion object {
-        fun plus(a: Complex, b: Complex) = Complex(a).plus(b)
-        fun minus(a: Complex, b: Complex) = Complex(a).minus(b)
-        fun times(a: Complex, b: Complex) = Complex(a).times(b)
-        fun times(a: Complex, alpha: Double) = Complex(a).times(alpha)
-        fun divides(a: Complex, b: Complex) = Complex(a).divides(b)
-        fun conjugate(a: Complex) = Complex(a).conjugate()
-        fun reciprocal(a: Complex) = Complex(a).reciprocal()
+        val ZERO = Complex(0.0, 0.0)
+        val ONE  = Complex(1.0, 0.0)
     }
 
 }

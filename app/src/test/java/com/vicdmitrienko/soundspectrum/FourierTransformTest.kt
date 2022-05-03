@@ -1,6 +1,6 @@
 package com.vicdmitrienko.soundspectrum
 
-import com.vicdmitrienko.soundspectrum.fft2.FourierTransform
+import com.vicdmitrienko.soundspectrum.fft.FourierTransform
 import org.junit.Test
 
 import org.junit.Assert.*

@@ -9,13 +9,13 @@ import android.util.AttributeSet
 import android.util.Log
 import android.view.View
 import androidx.core.graphics.withSave
-import com.vicdmitrienko.soundspectrum.fft2.Signal
-import com.vicdmitrienko.soundspectrum.fft2.Spectrum
+import com.vicdmitrienko.soundspectrum.fft.Signal
+import com.vicdmitrienko.soundspectrum.fft.Spectrum
 import com.vicdmitrienko.soundspectrum.utils.getSp
 import kotlin.math.min
-import kotlin.math.sin
 import kotlin.system.measureTimeMillis
 
+@Suppress("RemoveExplicitTypeArguments")
 class SoundView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -64,24 +64,6 @@ class SoundView @JvmOverloads constructor(
     private val drawTimeAvgCount = 100
     private val drawTimes = Array<Int>(drawTimeAvgCount) { 0 }
     private var drawTimeIndex = 0
-
-    // Test function
-    private fun getMockWave(): ByteArray {
-        val bytes = ByteArray(3000)
-
-        // Make some mock signal
-        if (sampleFormat == AudioFormat.ENCODING_PCM_16BIT) {
-            val sampleCount = bytes.size / 2
-            for (i in 0 until sampleCount) {
-                val sampleF: Double = sin(Math.PI * i / sampleCount) * Short.MAX_VALUE
-                val sample: Int = sampleF.toInt()
-                bytes[i*2  ] = (sample shr 0).toByte()
-                bytes[i*2+1] = (sample shr 8).toByte()
-            }
-        }
-
-        return bytes
-    }
 
     fun setSoundWave(newWave: ByteArray) {
         // Check for overload
@@ -382,6 +364,7 @@ class SoundView @JvmOverloads constructor(
         )
     }
 
+    @Suppress("unused")
     enum class ViewMode(val id: Int, val desc: String) {
         WAVE(0, "Sound wave"),
         SPECTRUM(1, "Sound spectrum")
